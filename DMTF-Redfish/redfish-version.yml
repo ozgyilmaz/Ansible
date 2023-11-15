@@ -1,0 +1,25 @@
+- gather_facts: False
+  name: how to find Redfish version
+  hosts: localhost
+  vars:
+    odata_ids: "[*].\"@odata.id\""
+  tasks:
+
+    - name: get redfish v1 link response
+      uri:
+        url: https://{{management_ip}}/redfish/v1
+        validate_certs: no
+        method: GET
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+      register: redfish_v1_output
+
+    - name: parse redfish version
+      set_stats:
+        data:
+          redfish_version: "{{redfish_v1_output.json.RedfishVersion}}"
