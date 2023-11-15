@@ -1,0 +1,20 @@
+- gather_facts: False
+  name: send a basic email about bears
+  hosts: localhost
+  tasks:
+    - name: Send email task
+      mail:
+        host: <smtp_ip>
+        port: <smtp_port>
+        from: root@growlingbear.inn
+        to:
+        - a-user@a-domain.com
+        - another-user@another-domain.com
+        subject: This is a useless mail about growling bears
+        charset: utf8
+        body: |
+            Here is some facts about growling bears:
+            
+            They growl.
+            They loudly growl.
+      delegate_to: localhost
