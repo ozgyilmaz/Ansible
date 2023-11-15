@@ -1,0 +1,79 @@
+- gather_facts: False
+  name: iso mount
+
+  vars:
+    odata_ids: "[*].\"@odata.id\""
+
+  tasks:
+    - name: get redfish v1 managers link response
+      uri:
+        url: https://{{management_ip}}/redfish/v1/Managers
+        validate_certs: no
+        method: GET
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+      register: redfish_v1_managers_output
+    
+    - name: parse redfish managers member link
+      set_fact:
+        managers_link: "{{redfish_v1_managers_output.json.Members[0][\"@odata.id\"]}}"
+    
+    - name: get redfish v1 virtualmedia link response
+      uri:
+        url: https://{{management_ip}}{{managers_link}}/VirtualMedia
+        validate_certs: no
+        method: GET
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+      register: virtualmedia_base_output
+    
+    - name: parse redfish v1 virtualmedia members links
+      set_fact:
+        virtualmedia_links: "{{ virtualmedia_base_output.json.Members | json_query(odata_ids)}}"
+    
+    - name: check outputs of virtual media members
+      uri:
+        url: https://{{management_ip}}{{item}}
+        validate_certs: no
+        method: GET
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+      loop: "{{ virtualmedia_links }}"
+      register: virtualmedias_output
+    
+    - name: get proper virtual media member link
+      set_fact:
+        virtualmedia_cd_link: "{{ item.item}}"
+      when: '"CD" in item.json.MediaTypes or "DVD" in item.json.MediaTypes'
+      loop: "{{ virtualmedias_output.results }}"
+
+    - name: mount iso to virtual media device
+      uri:
+        url: https://{{management_ip}}{{virtualmedia_cd_link}}/Actions/VirtualMedia.InsertMedia
+        validate_certs: no
+        method: POST
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+        body_format: json
+        body: {"Image": "http://<url_for_iso>"}
+        status_code: [200, 204]

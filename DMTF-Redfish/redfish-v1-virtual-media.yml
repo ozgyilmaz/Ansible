@@ -1,0 +1,42 @@
+- gather_facts: False
+  name: finding virtual media devices
+
+  vars:
+    odata_ids: "[*].\"@odata.id\""
+
+  tasks:
+    - name: get redfish v1 managers link response
+      uri:
+        url: https://{{management_ip}}/redfish/v1/Managers
+        validate_certs: no
+        method: GET
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+      register: redfish_v1_managers_output
+    
+    - name: parse redfish managers member link
+      set_fact:
+        managers_link: "{{redfish_v1_managers_output.json.Members[0][\"@odata.id\"]}}"
+    
+    - name: get redfish v1 virtualmedia link response
+      uri:
+        url: https://{{management_ip}}{{managers_link}}/VirtualMedia
+        validate_certs: no
+        method: GET
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+      register: virtualmedia_base_output
+    
+    - name: parse redfish v1 virtualmedia members links
+      set_fact:
+        virtualmedia_links: "{{ virtualmedia_base_output.json.Members | json_query(odata_ids)}}"

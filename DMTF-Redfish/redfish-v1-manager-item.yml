@@ -1,0 +1,24 @@
+- gather_facts: False
+  name: find manager item
+
+  vars:
+    odata_ids: "[*].\"@odata.id\""
+
+  tasks:
+    - name: get redfish v1 managers link response
+      uri:
+        url: https://{{management_ip}}/redfish/v1/Managers
+        validate_certs: no
+        method: GET
+        return_content: yes
+        user: '<management_username>'
+        password: '<management_password>'
+        force_basic_auth: yes
+        headers:
+                Content-Type: application/json
+                Accept: application/json
+      register: redfish_v1_managers_output
+    
+    - name: parse redfish managers member link
+      set_fact:
+        managers_link: "{{redfish_v1_managers_output.json.Members[0][\"@odata.id\"]}}"
